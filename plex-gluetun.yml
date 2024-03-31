@@ -1,0 +1,66 @@
+version: "3"
+services:
+  gluetun-plex:
+    hostname: "gluetun-plex"
+    container_name: "gluetun-plex"
+    image: qmcgaw/gluetun
+    cap_add:
+      - NET_ADMIN
+    restart: "always"
+    networks:
+      - gluetun-plex
+    ports:
+     # - 8888:8888/tcp # HTTP proxy
+     # - 8388:8388/tcp # Shadowsocks
+     # - 8388:8388/udp # Shadowsocks
+      - 32400:32400/tcp
+    environment:
+      - "PGID=1000"
+      - "PUID=1000"
+      - "TZ=Etc/UTC"
+      - "UMASK=022"
+      - "VPNSP=airvpn"
+      - "VPN_TYPE=wireguard"
+      - "WIREGUARD_PRESHARED_KEY=<xxxxxxxxxxxxx>"
+      - "WIREGUARD_PRIVATE_KEY=<xxxxxxxxxxx>"
+      - "WIREGUARD_ADDRESSES=<xxx.xxx.xxx.xxx>" #WIREGUARD IP
+      - "FIREWALL_VPN_INPUT_PORTS=11111" #VPN PROVIDED PORT
+ #     - "SERVER_REGIONS=America"
+#      - FIREWALL_OUTBOUND_SUBNETS=172.19.0.0/16,192.168.2.0/24
+#      - "SERVER_COUNTRIES="
+    volumes:
+      - "/opt/appdata/gluetun-plex/:/gluetun"
+  plex:
+    container_name: "plex"
+    environment:
+      - "PGID=1000"
+      - "PUID=1000"
+      - "TZ=Etc/UTC"
+      - "UMASK=022"
+      - "VERSION=docker"
+      - "PLEX_CLAIM=PLEX_CLAIM_ID"
+      ##- "ADVERTISE_IP=<http://exemple.com>"
+      ##- "NVIDIA_VISIBLE_DEVICES=all"
+      ##- "NVIDIA_DRIVER_CAPABILITIES=all"
+    image: "lscr.io/linuxserver/plex:latest"
+    restart: "always"
+    network_mode: "service:gluetun-plex"
+    ##devices:
+    ##   - "/dev/dri:/dev/dri"
+    ##runtime: "nvidia"
+    security_opt:
+      - "no-new-privileges:true"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/opt/appdata/plex/database:/config:rw"
+      - "/opt/appdata/plex/transcode:/transcode:rw"
+      - "/dev/shm:/ram_transcode:rw"
+      - "mnt:/mnt:ro"
+   socat:
+        network_mode: "service:gluetun-plex"
+        image: alpine/socat
+        command: "TCP-LISTEN:49372,fork,reuseaddr TCP-CONNECT:gluetun-plex:32400" ## tcp redirect for plex
+        restart: always
+networks:
+  gluetun-plex:
+    driver: bridge

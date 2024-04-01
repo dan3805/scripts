@@ -1,3 +1,5 @@
+## https://jackbailey.dev/blog/posts/expose-plex-without-port-forwarding/
+
 version: "3"
 services:
   gluetun-plex:
